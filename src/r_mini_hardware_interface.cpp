@@ -10,10 +10,10 @@ RminiHW::RminiHW (double period, const std::string port_id, const uint32_t baud_
   id_wrist_{4,5,6},
   counter_(0)
 {
-
+  writeFirst();
   int joint_state_cnt = 0;
   int joint_pos_cnt =0; 
-  std::string joint_names[JOINT_NUM] = {"joint1", "joint2", "joint3", "joint4", "joint5", "joint6"};
+/*  std::string joint_names[JOINT_NUM] = {"joint1", "joint2", "joint3", "joint4", "joint5", "joint6"};
 
   //getting all the joints registered for joint_state_interface
 
@@ -26,8 +26,9 @@ RminiHW::RminiHW (double period, const std::string port_id, const uint32_t baud_
     //getting the id into an array
     id_array_[joint_state_cnt] = joint_state_cnt;
   }
+*/
 
-/*  for(std::map<std::string, uint32_t>::iterator it = dynamixel_.begin(); it != dynamixel_.end(); ++it)
+  for(std::map<std::string, uint32_t>::iterator it = dynamixel_.begin(); it != dynamixel_.end(); ++it)
   {
     ROS_INFO_STREAM(it->first);
     hardware_interface::JointStateHandle state_handle(it->first, &pos_[joint_state_cnt], &vel_[joint_state_cnt], &effort_[joint_state_cnt]);
@@ -38,24 +39,26 @@ RminiHW::RminiHW (double period, const std::string port_id, const uint32_t baud_
     joint_state_cnt++;
 
   }
-*/
+
   registerInterface(&joint_state_interface_);
 
   joint_state_cnt = 0;
   //getting all the joints registered for joint_position_inteface (command)
-  for(joint_state_cnt; joint_state_cnt < JOINT_NUM; ++joint_state_cnt)
+/*  for(joint_state_cnt; joint_state_cnt < JOINT_NUM; ++joint_state_cnt)
   {
     ROS_INFO_STREAM(joint_names[joint_state_cnt]);
     hardware_interface::JointHandle joint_pos_handle(joint_state_interface_.getHandle(joint_names[joint_state_cnt]), &cmd_[joint_state_cnt]);
     joint_pos_interface_.registerHandle(joint_pos_handle);
-  }
-/*  for(std::map<std::string, uint32_t>::iterator it = dynamixel_.begin(); it != dynamixel_.end(); ++it)
+    }
+*/
+
+  for(std::map<std::string, uint32_t>::iterator it = dynamixel_.begin(); it != dynamixel_.end(); ++it)
   {
     ROS_INFO_STREAM(it->first);
     hardware_interface::JointHandle joint_pos_handle(joint_state_interface_.getHandle(it->first), &cmd_[joint_pos_cnt]);
     joint_pos_interface_.registerHandle(joint_pos_handle);
   }
-*/
+
   
   registerInterface(&joint_pos_interface_);
 
@@ -186,26 +189,41 @@ void RminiHW::read(void)
       ROS_ERROR("%s", log);
     }
   }
-  pos_[0] = get_position123_[0];
-  pos_[1] = get_position123_[1];
-  pos_[2] = get_position123_[2];
-  pos_[3] = get_position456_[0];
-  pos_[4] = get_position456_[1];
-  pos_[5] = get_position456_[2];
+   //Converting values to radian
+  //populate pos_ with values for joint1 to joint3
+  for (int index; index < 3; ++index)
+  {
+    pos_[index] = dxl_wb_.convertValue2Radian(id_shoulder_[index], get_position123_[index]);
+  }
+  
+  //populate pos_ with values for joint4 to joint6
+  for (int index; index < 3; ++index)
+  {
+    pos_[index+3] = dxl_wb_.convertValue2Radian(id_wrist_[index], get_position456_[index]);
+  }
+  
+  //Converting values to velocity
+  for (int index; index < 3; ++index)
+  {
+    vel_[index] = dxl_wb_.convertValue2Velocity(id_shoulder_[index], get_velocity123_[index]);
+  }
 
-  vel_[0] = get_velocity123_[0];
-  vel_[1] = get_velocity123_[1];
-  vel_[2] = get_velocity123_[2];
-  vel_[3] = get_velocity456_[0];
-  vel_[4] = get_velocity456_[1];
-  vel_[5] = get_velocity456_[2];
+  for (int index; index < 3; ++index)
+  {
+    vel_[index+3] = dxl_wb_.convertValue2Velocity(id_wrist_[index], get_velocity456_[index]);
+  }
 
-  effort_[0] = get_current123_[0];
-  effort_[1] = get_current123_[1];
-  effort_[2] = get_current123_[2];
-  effort_[3] = get_current456_[0];
-  effort_[4] = get_current456_[1];
-  effort_[5] = get_current456_[2];
+  //converting values to current [IMAN] [TODO] attempt at current to torque mapping 
+  for (int index; index < 3; ++index)
+  {
+    effort_[index] = dxl_wb_.convertValue2Current(id_shoulder_[index], get_current123_[index]);
+  }
+
+  for (int index; index < 3; ++index)
+  {
+    effort_[index+3] = dxl_wb_.convertValue2Current(id_wrist_[index], get_current456_[index]);
+  }
+
   
   //initialize cmd_ to current position so 
   // the robot would not jump to default pose
@@ -222,7 +240,7 @@ void RminiHW::writeFirst(void)
   //initialize dynamixel workbench 
   bool result = false;
   const char* log;
-  ROS_ERROR("[DEBUG]Constructor: starting to initial dynamixel");
+  
   result = dxl_wb_.init(port_id_.c_str(), baudrate_, &log);
   if (result == false)
   {
