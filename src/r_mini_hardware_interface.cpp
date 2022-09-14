@@ -57,6 +57,7 @@ RminiHW::RminiHW (double period, const std::string port_id, const uint32_t baud_
     ROS_INFO_STREAM(it->first);
     hardware_interface::JointHandle joint_pos_handle(joint_state_interface_.getHandle(it->first), &cmd_[joint_pos_cnt]);
     joint_pos_interface_.registerHandle(joint_pos_handle);
+    joint_pos_cnt++;
   }
 
   

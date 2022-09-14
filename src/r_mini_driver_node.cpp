@@ -27,7 +27,7 @@ int main(int argc, char **argv)
   ros::AsyncSpinner spinner (2);
   spinner.start();
 
-  r_mini.writeFirst();
+//  r_mini.writeFirst();
   
   while(ros::ok())
   {

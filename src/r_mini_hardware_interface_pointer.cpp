@@ -44,7 +44,7 @@ RminiHW::RminiHW (double period, const std::string port_id, const uint32_t baud_
 
   registerInterface(&joint_state_interface_);
 
-  joint_state_cnt = 0;
+//  joint_state_cnt = 0;
   //getting all the joints registered for joint_position_inteface (command)
 /*  for(joint_state_cnt; joint_state_cnt < JOINT_NUM; ++joint_state_cnt)
   {
@@ -58,6 +58,7 @@ RminiHW::RminiHW (double period, const std::string port_id, const uint32_t baud_
     ROS_INFO_STREAM(it->first);
     hardware_interface::JointHandle joint_pos_handle(joint_state_interface_.getHandle(it->first), &cmd_[joint_pos_cnt]);
     joint_pos_interface_.registerHandle(joint_pos_handle);
+    joint_pos_cnt++;
   }
 
   
